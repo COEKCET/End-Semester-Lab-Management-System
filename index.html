@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Lab Exam Management System – KCET</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & Variables ─────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --p1:#4A148C;--p2:#6A1B9A;--p3:#7B1FA2;--p4:#9C27B0;--p5:#CE93D8;
+  --g1:#F3E5F5;--g2:#EDE7F6;--acc:#FF6F00;--acc2:#FFB300;
+  --white:#ffffff;--dark:#1A0033;--mid:#6D3080;--card:rgba(255,255,255,0.92);
+  --shadow:0 20px 60px rgba(74,20,140,0.18);
+  --radius:18px;--radius-sm:10px;
+}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:linear-gradient(135deg,#1A0033 0%,#4A148C 40%,#7B1FA2 70%,#311B92 100%);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative;
+}
+
+/* ── Animated Background ───────────────────────────────── */
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.35;animation:float 8s ease-in-out infinite;}
+.orb1{width:500px;height:500px;background:#9C27B0;top:-150px;left:-150px;animation-delay:0s;}
+.orb2{width:400px;height:400px;background:#311B92;bottom:-100px;right:-100px;animation-delay:-3s;}
+.orb3{width:300px;height:300px;background:#FF6F00;bottom:20%;left:60%;animation-delay:-5s;opacity:0.15;}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-30px) scale(1.05);}}
+
+/* ── Grid lines ────────────────────────────────────────── */
+.grid-lines{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+
+/* ── Card ──────────────────────────────────────────────── */
+.login-wrap{
+  position:relative;z-index:10;width:100%;max-width:460px;padding:20px;
+  animation:slideUp 0.8s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(50px);}to{opacity:1;transform:translateY(0);}}
+
+.card{
+  background:var(--card);
+  backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+  border-radius:28px;padding:48px 44px;
+  border:1px solid rgba(255,255,255,0.4);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* ── Logo / Header ─────────────────────────────────────── */
+.logo-ring{
+  width:80px;height:80px;border-radius:50%;
+  background:linear-gradient(135deg,var(--p1),var(--p4));
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+  box-shadow:0 8px 32px rgba(74,20,140,0.4);
+  position:relative;overflow:hidden;
+}
+.logo-ring::after{
+  content:'';position:absolute;inset:3px;border-radius:50%;
+  background:linear-gradient(135deg,var(--p3),var(--p2));
+}
+.logo-ring svg{position:relative;z-index:1;fill:white;width:36px;height:36px;}
+
+h1{
+  font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;
+  text-align:center;color:var(--p1);margin-bottom:4px;line-height:1.2;
+}
+.subtitle{text-align:center;color:var(--mid);font-size:0.78rem;font-weight:400;margin-bottom:32px;letter-spacing:0.5px;}
+
+/* ── Form ──────────────────────────────────────────────── */
+.field{margin-bottom:20px;}
+label{display:block;font-size:0.78rem;font-weight:600;color:var(--p2);margin-bottom:7px;letter-spacing:0.5px;text-transform:uppercase;}
+.inp-wrap{position:relative;}
+.inp-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--mid);fill:none;stroke-width:2;pointer-events:none;}
+input{
+  width:100%;padding:13px 16px 13px 44px;border-radius:var(--radius-sm);
+  border:2px solid rgba(106,27,154,0.2);background:rgba(243,229,245,0.5);
+  font-family:'DM Sans',sans-serif;font-size:0.95rem;color:var(--dark);
+  transition:all 0.25s;outline:none;
+}
+input:focus{border-color:var(--p3);background:white;box-shadow:0 0 0 4px rgba(156,39,176,0.12);}
+input::placeholder{color:#b0a0c0;}
+
+/* ── Button ────────────────────────────────────────────── */
+.btn-login{
+  width:100%;padding:15px;border-radius:var(--radius-sm);border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--p1) 0%,var(--p4) 100%);
+  color:white;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;
+  letter-spacing:0.5px;margin-top:8px;position:relative;overflow:hidden;
+  transition:transform 0.2s,box-shadow 0.2s;
+  box-shadow:0 8px 24px rgba(74,20,140,0.35);
+}
+.btn-login::before{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+  transition:left 0.5s;
+}
+.btn-login:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(74,20,140,0.45);}
+.btn-login:hover::before{left:100%;}
+.btn-login:active{transform:translateY(0);}
+
+/* ── Error / loader ────────────────────────────────────── */
+.msg{
+  margin-top:14px;padding:10px 14px;border-radius:8px;font-size:0.85rem;
+  text-align:center;display:none;
+}
+.msg.error{background:#FCE4EC;color:#C62828;border:1px solid #EF9A9A;}
+.msg.info{background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;}
+
+.spinner{
+  display:none;width:22px;height:22px;border:3px solid rgba(255,255,255,0.3);
+  border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;
+  margin:0 auto;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── Footer badges ─────────────────────────────────────── */
+.badges{display:flex;justify-content:center;gap:10px;margin-top:28px;flex-wrap:wrap;}
+.badge{
+  background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);
+  border-radius:20px;padding:5px 14px;font-size:0.72rem;color:rgba(255,255,255,0.85);
+  backdrop-filter:blur(8px);
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media(max-width:480px){
+  .card{padding:36px 28px;}
+  h1{font-size:1.35rem;}
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+<div class="grid-lines"></div>
+
+<div class="login-wrap">
+  <div class="card">
+    <div class="logo-ring">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <h1>Lab Exam Management</h1>
+    <p class="subtitle">KAMARAJ COLLEGE OF ENGINEERING &amp; TECHNOLOGY<br/>Office of the Controller of Examinations</p>
+
+    <div class="field">
+      <label>User ID</label>
+      <div class="inp-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <input type="text" id="userId" placeholder="Enter your User ID" autocomplete="username"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <div class="inp-wrap">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password"/>
+      </div>
+    </div>
+
+    <button class="btn-login" onclick="doLogin()">
+      <span id="btnText">Sign In</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  
+</div>
+
+<script>
+// ── CONFIGURATION ─────────────────────────────────────────
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzogwBnxTlLTX8EtoscOBucLI_8qYmXhNXUBKeVATfJFUscTPZ-6vkNbAMiEwHdCWmj/exec';
+// Replace YOUR_DEPLOYMENT_ID_HERE with your actual GAS Web App URL
+
+// ── Login ─────────────────────────────────────────────────
+async function doLogin() {
+  const userId   = document.getElementById('userId').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const msg      = document.getElementById('msg');
+  const spinner  = document.getElementById('spinner');
+  const btnText  = document.getElementById('btnText');
+
+  if (!userId || !password) { showMsg('Please enter User ID and Password.','error'); return; }
+
+  btnText.style.display='none'; spinner.style.display='block';
+  msg.style.display='none';
+
+  try {
+    const res = await fetch(`${GAS_URL}?action=login&userId=${encodeURIComponent(userId)}&password=${encodeURIComponent(password)}`);
+    const data = await res.json();
+    if (data.success) {
+      sessionStorage.setItem('user', JSON.stringify(data.user));
+      showMsg('Login successful! Redirecting…','info');
+      setTimeout(()=>{
+        window.location.href = data.user.role === 'Admin' ? 'admin.html' : 'faculty.html';
+      }, 800);
+    } else {
+      showMsg(data.error || 'Invalid credentials. Please try again.','error');
+    }
+  } catch(e) {
+    showMsg('Network error. Please check your connection.','error');
+  } finally {
+    btnText.style.display='block'; spinner.style.display='none';
+  }
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('msg');
+  el.textContent = text; el.className = `msg ${type}`; el.style.display='block';
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// Auto-redirect if already logged in
+const existing = sessionStorage.getItem('user');
+if (existing) {
+  const u = JSON.parse(existing);
+  window.location.href = u.role === 'Admin' ? 'admin.html' : 'faculty.html';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Admin Portal – Lab Exam Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --p1:#4A148C;--p2:#6A1B9A;--p3:#7B1FA2;--p4:#9C27B0;--p5:#CE93D8;--p6:#F3E5F5;
+  --acc:#FF6F00;--green:#2E7D32;--red:#C62828;--blue:#1565C0;
+  --dark:#1A0033;--mid:#6D3080;--light:#F8F4FF;--white:#fff;
+  --shadow:0 4px 24px rgba(74,20,140,0.10);
+  --radius:16px;--radius-sm:10px;--radius-xs:6px;
+  --sidebar:270px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--dark);min-height:100vh;display:flex;}
+
+/* ── Sidebar ── */
+/* Update sidebar style — add overflow:hidden */
+.sidebar{
+  width:var(--sidebar);
+  background:linear-gradient(180deg,#1A0033 0%,#4A148C 50%,#311B92 100%);
+  height:100vh;position:fixed;left:0;top:0;z-index:100;display:flex;flex-direction:column;
+  transition:transform 0.3s;overflow:hidden;
+}
+.sidebar-logo{padding:28px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.12);}
+.brand{font-family:'Playfair Display',serif;color:white;font-size:1.05rem;font-weight:700;}
+.brand-sub{color:rgba(255,255,255,0.55);font-size:0.68rem;margin-top:3px;}
+.admin-chip{display:inline-block;background:var(--acc);color:white;padding:2px 10px;border-radius:10px;font-size:0.68rem;font-weight:700;margin-top:6px;letter-spacing:0.5px;}
+.sidebar-user{padding:14px 22px;background:rgba(255,255,255,0.08);margin:14px 12px;border-radius:var(--radius-sm);}
+.uname{color:white;font-weight:600;font-size:0.9rem;}
+.urole{color:rgba(255,255,255,0.6);font-size:0.75rem;margin-top:2px;}
+nav{flex:1;padding:6px 0;overflow-y:auto;overflow-x:hidden;min-height:0;}
+nav::-webkit-scrollbar{width:4px;}
+nav::-webkit-scrollbar-track{background:transparent;}
+nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:4px;}
+nav::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.35);}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 22px;color:rgba(255,255,255,0.7);cursor:pointer;transition:all 0.2s;font-size:0.87rem;border-left:3px solid transparent;}
+.nav-item:hover{color:white;background:rgba(255,255,255,0.08);border-left-color:var(--p5);}
+.nav-item.active{color:white;background:rgba(255,255,255,0.15);border-left-color:white;font-weight:600;}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;}
+.nav-section{padding:10px 22px 4px;font-size:0.62rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+.sidebar-footer{padding:14px 22px;border-top:1px solid rgba(255,255,255,0.1);}
+.btn-logout{width:100%;padding:9px;border-radius:var(--radius-xs);border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;cursor:pointer;font-size:0.83rem;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
+.btn-logout:hover{background:rgba(255,255,255,0.18);}
+
+/* ── Main ── */
+.main{margin-left:var(--sidebar);flex:1;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:var(--white);border-bottom:1px solid rgba(156,39,176,0.12);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--p1);font-weight:700;}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;}
+.hamburger svg{width:22px;height:22px;stroke:var(--p1);fill:none;stroke-width:2;}
+.content{padding:26px;flex:1;}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px;}
+.kpi{background:var(--white);border-radius:var(--radius);padding:18px;border:1px solid rgba(156,39,176,0.1);box-shadow:var(--shadow);transition:transform 0.2s;}
+.kpi:hover{transform:translateY(-2px);}
+.kpi-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.kpi-icon svg{width:22px;height:22px;fill:none;stroke:white;stroke-width:2;}
+.kpi-val{font-size:1.6rem;font-weight:700;color:var(--p1);line-height:1;}
+.kpi-lbl{font-size:0.72rem;color:var(--mid);margin-top:3px;}
+
+/* ── Panels ── */
+.panel{display:none;} .panel.active{display:block;}
+
+/* ── Box ── */
+.box{background:var(--white);border-radius:var(--radius);padding:24px;border:1px solid rgba(156,39,176,0.1);box-shadow:var(--shadow);margin-bottom:22px;}
+.box-title{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--p1);font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+.box-title svg{width:18px;height:18px;stroke:var(--p3);fill:none;stroke-width:2;}
+
+/* ── Form ── */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.form-grid .span2{grid-column:span 2;} .form-grid .span3{grid-column:span 3;}
+.field label{display:block;font-size:0.73rem;font-weight:600;color:var(--p2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;}
+.field select,.field input{width:100%;padding:10px 13px;border-radius:var(--radius-xs);border:2px solid rgba(156,39,176,0.15);background:#F3E5F5;font-family:'DM Sans',sans-serif;font-size:0.88rem;color:var(--dark);transition:all 0.2s;outline:none;}
+.field select:focus,.field input:focus{border-color:var(--p3);background:white;box-shadow:0 0 0 3px rgba(156,39,176,0.1);}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236A1B9A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+
+/* ── Buttons ── */
+.btn{padding:10px 20px;border-radius:var(--radius-xs);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;}
+.btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;}
+.btn-primary{background:linear-gradient(135deg,var(--p1),var(--p4));color:white;box-shadow:0 4px 14px rgba(74,20,140,0.28);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(74,20,140,0.38);}
+.btn-secondary{background:var(--p6);color:var(--p1);border:1px solid rgba(156,39,176,0.2);}
+.btn-danger{background:#FFEBEE;color:var(--red);border:1px solid #FFCDD2;}
+.btn-danger:hover{background:#FFCDD2;}
+.btn-success{background:#E8F5E9;color:var(--green);border:1px solid #C8E6C9;}
+.btn-success:hover{background:#C8E6C9;}
+.btn-warn{background:#FFF8E1;color:#E65100;border:1px solid #FFE082;}
+.btn-sm{padding:6px 12px;font-size:0.78rem;}
+.btn-acc{background:linear-gradient(135deg,var(--acc),#FFB300);color:white;}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid rgba(156,39,176,0.1);}
+table{width:100%;border-collapse:collapse;font-size:0.8rem;}
+thead{background:linear-gradient(135deg,var(--p1),var(--p3));}
+thead th{color:white;padding:11px 13px;text-align:left;font-weight:600;white-space:nowrap;font-size:0.76rem;}
+tbody tr{border-bottom:1px solid rgba(156,39,176,0.07);transition:background 0.15s;}
+tbody tr:hover{background:rgba(243,229,245,0.5);}
+tbody td{padding:10px 13px;vertical-align:middle;}
+.badge-pill{display:inline-block;padding:2px 9px;border-radius:16px;font-size:0.7rem;font-weight:600;}
+.badge-fn{background:#E3F2FD;color:#1565C0;} .badge-an{background:#FFF3E0;color:#E65100;}
+.badge-pending{background:#FFF8E1;color:#E65100;} .badge-approved{background:#E8F5E9;color:#2E7D32;}
+.badge-locked{background:#FFEBEE;color:#C62828;} .badge-unlocked{background:#E8F5E9;color:#2E7D32;}
+
+/* ── Filter bar ── */
+.filter-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;align-items:flex-end;}
+.filter-bar .field{flex:1;min-width:130px;}
+
+/* ── Charts ── */
+.chart-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:24px;}
+.chart-box{background:var(--white);border-radius:var(--radius);padding:20px;border:1px solid rgba(156,39,176,0.1);box-shadow:var(--shadow);}
+.chart-box h3{font-size:0.85rem;color:var(--p2);font-weight:600;margin-bottom:14px;}
+.bar-chart{display:flex;flex-direction:column;gap:9px;}
+.bar-row{display:flex;align-items:center;gap:9px;font-size:0.78rem;}
+.bar-label{width:90px;color:var(--mid);font-size:0.72rem;text-align:right;flex-shrink:0;}
+.bar-track{flex:1;height:18px;background:var(--p6);border-radius:8px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--p2),var(--p4));transition:width 0.8s ease;}
+.bar-count{width:36px;color:var(--p1);font-weight:700;font-size:0.78rem;}
+
+/* ── Dept summary cards ── */
+.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:22px;}
+.dept-card{background:var(--white);border-radius:var(--radius);padding:18px;border:1px solid rgba(156,39,176,0.1);box-shadow:var(--shadow);border-left:4px solid var(--p3);}
+.dept-card .dname{font-weight:700;color:var(--p1);font-size:0.9rem;margin-bottom:6px;}
+.dept-card .dstat{font-size:0.78rem;color:var(--mid);margin-bottom:2px;}
+.dept-card .dbig{font-size:1.4rem;font-weight:700;color:var(--p3);}
+
+/* ── Lock Status Badge ── */
+.lock-status-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 12px;
+  border-radius:20px;
+  font-size:0.72rem;
+  font-weight:600;
+}
+.lock-status-badge.locked{
+  background:#FFEBEE;
+  color:#C62828;
+}
+.lock-status-badge.unlocked{
+  background:#E8F5E9;
+  color:#2E7D32;
+}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,0,51,0.55);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:white;border-radius:var(--radius);width:100%;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.25);}
+.modal-head{padding:18px 22px;border-bottom:1px solid rgba(156,39,176,0.15);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--p1),var(--p3));}
+.modal-head h2{color:white;font-size:0.95rem;font-weight:700;}
+.modal-close{background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:1rem;}
+.modal-body{padding:22px;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:28px;right:28px;z-index:9999;background:var(--p1);color:white;padding:11px 18px;border-radius:var(--radius-sm);font-size:0.85rem;box-shadow:0 8px 24px rgba(0,0,0,0.2);transform:translateY(80px);opacity:0;transition:all 0.4s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--green);} .toast.error{background:var(--red);} .toast.warn{background:#E65100;}
+
+/* ── Progress bar ── */
+.progress-bar{height:8px;background:var(--p6);border-radius:4px;margin-top:8px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--p2),var(--acc));transition:width 0.6s;}
+
+.overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:90;}
+.overlay-bg.open{display:block;}
+
+/* ── Responsive ── */
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}  .chart-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:800px){.sidebar{transform:translateX(-100%);} .sidebar.open{transform:translateX(0);} .main{margin-left:0;} .hamburger{display:block;} .kpi-grid{grid-template-columns:repeat(2,1fr);} .form-grid{grid-template-columns:1fr;} .form-grid .span2,.form-grid .span3{grid-column:span 1;} .chart-grid{grid-template-columns:1fr;}}
+@media(max-width:480px){.kpi-grid{grid-template-columns:1fr;} .content{padding:14px;}}
+</style>
+</head>
+<body>
+<div class="overlay-bg" id="overlayBg" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">KCET Lab Exam</div>
+    <div class="brand-sub">Management System</div>
+    <span class="admin-chip">ADMIN</span>
+  </div>
+  <div class="sidebar-user">
+    <div class="uname" id="sUser">Admin</div>
+    <div class="urole">Administrator</div>
+  </div>
+  <nav>
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showPanel('dashboard')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-section">Records</div>
+    <div class="nav-item" onclick="showPanel('allRecords')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      All Records
+    </div>
+    <div class="nav-item" onclick="showPanel('pending')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Pending Approval
+    </div>
+    <div class="nav-section">Analysis</div>
+    <div class="nav-item" onclick="showPanel('deptWise')">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Dept-wise Analysis
+    </div>
+    <div class="nav-item" onclick="showPanel('reports')">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Reports
+    </div>
+    <div class="nav-section">Administration</div>
+    <div class="nav-item" onclick="showPanel('lock')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      Lock Management
+    </div>
+    <div class="nav-item" onclick="showPanel('users')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      User Management
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="btn-logout" onclick="logout()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="hamburger" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title" id="panelTitle">Admin Dashboard</div>
+    </div>
+    <span style="font-size:0.78rem;color:var(--mid)" id="topUser"></span>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi"><div class="kpi-icon" style="background:linear-gradient(135deg,#4A148C,#9C27B0)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg></div><div class="kpi-val" id="k1">0</div><div class="kpi-lbl">Total Records</div></div>
+        <div class="kpi"><div class="kpi-icon" style="background:linear-gradient(135deg,#E65100,#FF9800)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="kpi-val" id="k2">0</div><div class="kpi-lbl">Pending Approval</div></div>
+        <div class="kpi"><div class="kpi-icon" style="background:linear-gradient(135deg,#2E7D32,#66BB6A)"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="kpi-val" id="k3">0</div><div class="kpi-lbl">Approved</div></div>
+        <div class="kpi"><div class="kpi-icon" style="background:linear-gradient(135deg,#1565C0,#42A5F5)"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="kpi-val" id="k4">0</div><div class="kpi-lbl">Total Candidates</div></div>
+        <div class="kpi"><div class="kpi-icon" style="background:linear-gradient(135deg,#880E4F,#E91E63)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div><div class="kpi-val" id="k5">0</div><div class="kpi-lbl">Departments</div></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-box"><h3>🏢 Department-wise Records</h3><div class="bar-chart" id="adDeptChart"></div></div>
+        <div class="chart-box"><h3>📅 Session Distribution</h3><div class="bar-chart" id="adSessionChart"></div></div>
+        <div class="chart-box"><h3>📊 Year-wise Records</h3><div class="bar-chart" id="adYearChart"></div></div>
+      </div>
+
+      <div class="box">
+        <div class="box-title"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Department Summary</div>
+        <div class="dept-grid" id="deptSummary"></div>
+      </div>
+    </div>
+
+    <!-- ALL RECORDS -->
+    <div class="panel" id="panel-allRecords">
+      <div class="box">
+        <div class="box-title"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>All Department Records</div>
+        <div class="filter-bar">
+          <div class="field"><label>Department</label>
+            <select id="faDept" onchange="filterAll()"><option value="">All Departments</option></select>
+          </div>
+          <div class="field"><label>Year</label>
+            <select id="faYear" onchange="filterAll()"><option value="">All</option><option>I</option><option>II</option><option>III</option><option>IV</option></select>
+          </div>
+          <div class="field"><label>Semester</label>
+            <select id="faSem" onchange="filterAll()"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+          </div>
+          <div class="field"><label>Status</label>
+            <select id="faStatus" onchange="filterAll()"><option value="">All</option><option value="pending">Pending</option><option value="approved">Approved</option></select>
+          </div>
+          <button class="btn btn-secondary" onclick="loadAllRecords()" style="margin-bottom:0">
+            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg> Refresh
+          </button>
+          <button class="btn btn-success" onclick="exportAllExcel()" style="margin-bottom:0">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table id="allRecordsTable">
+            <thead><tr>
+              <th>#</th><th>Ref</th><th>Dept.</th><th>Degree</th><th>Yr/Sem</th>
+              <th>Course</th><th>Date</th><th>Sess.</th><th>Cand.</th>
+              <th>Reg. Nos</th><th>Venue</th><th>Internal Examiner</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="allRecordsBody"><tr><td colspan="14" style="text-align:center;padding:30px;color:var(--mid)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PENDING APPROVAL -->
+    <div class="panel" id="panel-pending">
+      <div class="box">
+        <div class="box-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Pending Records – Assign External & Approve</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Ref</th><th>Dept.</th><th>Course</th><th>Date</th><th>Sess.</th><th>Internal Examiner</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="pendingBody"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--mid)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEPT WISE -->
+    <div class="panel" id="panel-deptWise">
+      <div class="box">
+        <div class="box-title"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Department-wise Analysis</div>
+        <div class="filter-bar">
+          <div class="field"><label>Department</label>
+            <select id="dwDept" onchange="renderDeptWise()"><option value="">All Departments</option></select>
+          </div>
+          <div class="field"><label>Year</label>
+            <select id="dwYear" onchange="renderDeptWise()"><option value="">All</option><option>I</option><option>II</option><option>III</option><option>IV</option></select>
+          </div>
+          <div class="field"><label>Semester</label>
+            <select id="dwSem" onchange="renderDeptWise()"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+          </div>
+        </div>
+        <div id="deptWiseContent"></div>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="panel" id="panel-reports">
+      <div class="box">
+        <div class="box-title"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Admin Reports</div>
+        <div class="form-grid">
+          <div class="field"><label>Department</label>
+            <select id="rpDept"><option value="">All Departments</option></select>
+          </div>
+          <div class="field"><label>Year</label>
+            <select id="rpYear"><option value="">All</option><option>I</option><option>II</option><option>III</option><option>IV</option></select>
+          </div>
+          <div class="field"><label>Semester</label>
+            <select id="rpSem"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+          </div>
+          <div class="field"><label>Report Type</label>
+            <select id="rpType"><option value="combined">Combined</option><option value="internal">Internal Only</option><option value="external">External Only</option></select>
+          </div>
+          <div class="field"><label>Month/Year</label>
+            <select id="rpMonth"><option value="APRIL 2026">APRIL 2026</option><option value="NOVEMBER 2025">NOVEMBER 2025</option></select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="adminPreviewReport()">Preview</button>
+          <button class="btn btn-success" onclick="adminExportExcel()">Excel</button>
+          <button class="btn btn-warn" onclick="adminExportWord()">Word</button>
+          <button class="btn btn-danger" onclick="adminExportPDF()">PDF</button>
+        </div>
+      </div>
+      <div class="box" id="adminReportBox" style="display:none;">
+        <div style="text-align:center;padding:10px 0 16px;border-bottom:2px solid var(--p6);margin-bottom:16px;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--p1)">Office of the Controller of Examinations</div>
+          <div style="font-size:0.8rem;color:var(--mid);margin-top:3px;" id="adminReportSubLine">End Semester Practical Examinations – Schedule – APRIL 2026</div>
+          <div style="font-size:0.8rem;font-weight:600;color:var(--p2);">Internal &amp; External Appointment Order – Laboratory Course Examinations</div>
+        </div>
+        <div class="table-wrap"><table><thead id="adminRHead"></thead><tbody id="adminRBody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- LOCK MANAGEMENT PANEL -->
+    <div class="panel" id="panel-lock">
+      <div class="box">
+        <div class="box-title">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Department Lock Management
+        </div>
+        <div style="margin-bottom:16px;padding:14px;background:rgba(74,20,140,0.08);border-left:4px solid var(--p3);border-radius:6px;font-size:0.85rem;color:var(--mid);">
+          <strong style="color:var(--p1);">ℹ️ Quick Guide:</strong> Lock departments to prevent faculty from adding new exam sessions. Once locked, faculty will see a notification and cannot submit entries until unlocked.
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Department</th>
+                <th style="text-align:center;">Status</th>
+                <th style="text-align:center;">Last Updated</th>
+                <th style="text-align:center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="lockBody">
+              <tr>
+                <td colspan="5" style="text-align:center;padding:30px;color:var(--mid);">
+                  Loading departments...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="panel" id="panel-users">
+      <div class="box">
+        <div class="box-title"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>User Management</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>User ID</th><th>Department</th><th>Role</th></tr></thead>
+            <tbody id="usersBody"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--mid)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- EXTERNAL DETAILS MODAL -->
+<div class="modal-overlay" id="extModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Assign External Examiner & Approve</h2>
+      <button class="modal-close" onclick="closeModal('extModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--p6);border-radius:8px;padding:12px;margin-bottom:18px;font-size:0.83rem;color:var(--mid)">
+        Reference: <strong id="extRef">–</strong> &nbsp;|&nbsp; Dept: <strong id="extDeptLabel">–</strong>
+      </div>
+      <div class="form-grid">
+        <input type="hidden" id="extRefInput"/>
+        <div class="field span3"><label>External Examiner Name</label><input type="text" id="extName" placeholder="Full name"/></div>
+        <div class="field"><label>Designation</label><input type="text" id="extDesig" placeholder="e.g. Assistant Professor"/></div>
+        <div class="field"><label>Department</label><input type="text" id="extDept" placeholder="e.g. ECE"/></div>
+        <div class="field"><label>College</label><input type="text" id="extCollege" placeholder="College name"/></div>
+        <div class="field span3"><label>Phone Number</label><input type="tel" id="extPhone" placeholder="10-digit mobile"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button class="btn btn-primary" onclick="saveExternal()">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Approve & Save
+        </button>
+        <button class="btn btn-secondary" onclick="closeModal('extModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Edit Record</h2>
+      <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <input type="hidden" id="eRef"/>
+        <div class="field"><label>Date</label><input type="date" id="eDate"/></div>
+        <div class="field"><label>Session</label><select id="eSession"><option value="FN">FN</option><option value="AN">AN</option></select></div>
+        <div class="field"><label>Total Candidates</label><input type="number" id="eTotal"/></div>
+        <div class="field"><label>Batch Candidates</label><input type="number" id="eBatch"/></div>
+        <div class="field"><label>Reg From</label><input type="text" id="eRegFrom"/></div>
+        <div class="field"><label>Reg To</label><input type="text" id="eRegTo"/></div>
+        <div class="field"><label>Venue Lab</label><input type="text" id="eLab"/></div>
+        <div class="field"><label>Internal Examiner</label><input type="text" id="eIntName"/></div>
+        <div class="field"><label>Designation</label><input type="text" id="eIntDesig"/></div>
+        <div class="field"><label>Phone</label><input type="tel" id="eIntPhone"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+        <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKpNJGyesCaa3tdmIMRl3OT8cT22tXXgiRyCVwUA9QsAOSbTq0nc5UB_4p1ynT5JKT/exec';
+
+let USER = null, ALL_RECORDS = [], ALL_USERS = [];
+
+// ── Init ──────────────────────────────────────────────────
+window.onload = async () => {
+  const saved = sessionStorage.getItem('user');
+  if (!saved) { window.location.href='index.html'; return; }
+  USER = JSON.parse(saved);
+  if (USER.role !== 'Admin') { window.location.href='faculty.html'; return; }
+  document.getElementById('sUser').textContent = USER.id;
+  document.getElementById('topUser').textContent = `👤 ${USER.id} (Admin)`;
+  await Promise.all([loadAllRecords(), loadUsers()]);
+  buildAdminDashboard();
+};
+
+// ── GAS ───────────────────────────────────────────────────
+async function gas(p) {
+  const res = await fetch(GAS_URL+'?'+new URLSearchParams(p));
+  return res.json();
+}
+async function gasPost(d) {
+  const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify(d)});
+  return res.json();
+}
+
+// ── Navigation ────────────────────────────────────────────
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  const titles={
+    dashboard:'Admin Dashboard',
+    allRecords:'All Records',
+    pending:'Pending Approval',
+    deptWise:'Dept-wise Analysis',
+    reports:'Reports',
+    lock:'Lock Management',
+    users:'User Management'
+  };
+  document.getElementById('panelTitle').textContent=titles[id]||id;
+  if(id==='deptWise') renderDeptWise();
+  if(id==='lock') loadLockStatus();
+  closeSidebar();
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlayBg').classList.toggle('open');
+}
+
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlayBg').classList.remove('open');
+}
+
+// ── Toast ─────────────────────────────────────────────────
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ── Load ──────────────────────────────────────────────────
+async function loadAllRecords() {
+  const d = await gas({action:'getAllRecords'});
+  ALL_RECORDS = d.records||[];
+  const depts=[...new Set(ALL_RECORDS.map(r=>r['Dept.']).filter(Boolean))];
+  ['faDept','dwDept','rpDept'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML='<option value="">All Departments</option>';
+    depts.forEach(dep=>sel.innerHTML+=`<option>${dep}</option>`);
+  });
+  filterAll();
+  renderPending();
+}
+
+async function loadUsers() {
+  const d=await gas({action:'getUsers'});
+  ALL_USERS=d.users||[];
+  const body=document.getElementById('usersBody');
+  body.innerHTML=ALL_USERS.map((u,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${u['User ID']||''}</td>
+      <td>${u['Department']||''}</td>
+      <td><span class="badge-pill ${u['Role']==='Admin'?'badge-an':'badge-fn'}">${u['Role']||''}</span></td>
+    </tr>`).join('');
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+function buildAdminDashboard() {
+  const records=ALL_RECORDS;
+  const depts=[...new Set(records.map(r=>r['Dept.']).filter(Boolean))];
+  document.getElementById('k1').textContent=records.length;
+  document.getElementById('k2').textContent=records.filter(r=>r['Status']==='pending'||!r['Status']).length;
+  document.getElementById('k3').textContent=records.filter(r=>r['Status']==='approved').length;
+  document.getElementById('k4').textContent=records.reduce((s,r)=>s+(parseInt(r['No.of.Candidates Date'])||0),0);
+  document.getElementById('k5').textContent=depts.length;
+
+  buildBarChart('adDeptChart',countBy(records,'Dept.'));
+  buildBarChart('adSessionChart',countBy(records,'Session FN/AN'));
+  buildBarChart('adYearChart',countBy(records,'Year'));
+
+  const deptGrid=document.getElementById('deptSummary');
+  deptGrid.innerHTML=depts.map(dep=>{
+    const dr=records.filter(r=>r['Dept.']==dep);
+    const cand=dr.reduce((s,r)=>s+(parseInt(r['No.of.Candidates Date'])||0),0);
+    const approved=dr.filter(r=>r['Status']==='approved').length;
+    const pct=dr.length?Math.round(approved/dr.length*100):0;
+    return `<div class="dept-card">
+      <div class="dname">${dep}</div>
+      <div class="dstat">${dr.length} sessions &nbsp;|&nbsp; ${cand} candidates</div>
+      <div class="dbig">${approved}/${dr.length}</div>
+      <div style="font-size:0.72rem;color:var(--mid);margin-bottom:4px;">approved</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function countBy(arr,key){
+  const m={};
+  arr.forEach(r=>{
+    const k=r[key];
+    if(!k)return;
+    m[k]=(m[k]||0)+1;
+  });
+  return m;
+}
+
+function buildBarChart(id,data){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const entries=Object.entries(data).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const max=Math.max(...entries.map(([,v])=>v),1);
+  el.innerHTML=entries.map(([k,v])=>`
+    <div class="bar-row">
+      <div class="bar-label">${String(k).substring(0,12)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(v/max*100).toFixed(0)}%"></div></div>
+      <div class="bar-count">${v}</div>
+    </div>`).join('');
+  if(!entries.length) el.innerHTML='<div style="color:var(--mid);font-size:0.8rem;text-align:center;padding:16px;">No data</div>';
+}
+
+// ── Filter All ────────────────────────────────────────────
+function filterAll() {
+  const dept=document.getElementById('faDept').value;
+  const yr=document.getElementById('faYear').value;
+  const sem=document.getElementById('faSem').value;
+  const status=document.getElementById('faStatus').value;
+  let filtered=ALL_RECORDS;
+  if(dept) filtered=filtered.filter(r=>r['Dept.']==dept);
+  if(yr) filtered=filtered.filter(r=>String(r['Year'])==yr);
+  if(sem) filtered=filtered.filter(r=>String(r['Sem'])==sem);
+  if(status) filtered=filtered.filter(r=>(r['Status']||'pending')==status);
+  renderAllTable(filtered);
+}
+
+function fmtDate(d){
+  if(!d)return '';
+  try{return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+  catch{return String(d);}
+}
+
+function renderAllTable(records) {
+  const body=document.getElementById('allRecordsBody');
+  if(!records.length){
+    body.innerHTML='<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--mid)">No records.</td></tr>';
+    return;
+  }
+  body.innerHTML=records.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${r['Reference']||''}</strong></td>
+      <td>${r['Dept.']||''}</td>
+      <td>${r['Degree']||''}</td>
+      <td>${r['Year']||''}/${r['Sem']||''}</td>
+      <td><strong>${r['Course Code']||''}</strong><br/><small>${r['Course Name']||''}</small></td>
+      <td>${fmtDate(r['Date'])}</td>
+      <td><span class="badge-pill ${r['Session FN/AN']=='FN'?'badge-fn':'badge-an'}">${r['Session FN/AN']||''}</span></td>
+      <td>${r['No.of.Candidates Date']||''}</td>
+      <td><small>${r['Register Number From']||''} → ${r['Register Number To']||''}</small></td>
+      <td><small>${r['Venue lab Name']||''}</small></td>
+      <td><small>${r['Internal Examiner']||''}<br/>${r['Designation']||''}</small></td>
+      <td><span class="badge-pill ${r['Status']==='approved'?'badge-approved':'badge-pending'}">${r['Status']||'pending'}</span></td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="btn btn-warn btn-sm" onclick='openEdit(${JSON.stringify(r).replace(/"/g,"&quot;")})'>✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r['Reference']}')">🗑️</button>
+          ${r['Status']!=='approved'?`<button class="btn btn-acc btn-sm" onclick='openExtModal(${JSON.stringify(r).replace(/"/g,"&quot;")})'>✅ Assign</button>`:''}
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function renderPending() {
+  const pending=ALL_RECORDS.filter(r=>r['Status']==='pending'||!r['Status']);
+  const body=document.getElementById('pendingBody');
+  if(!pending.length){
+    body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--green)">✅ All records approved!</td></tr>';
+    return;
+  }
+  body.innerHTML=pending.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${r['Reference']||''}</strong></td>
+      <td>${r['Dept.']||''}</td>
+      <td>${r['Course Code']||''}<br/><small>${r['Course Name']||''}</small></td>
+      <td>${fmtDate(r['Date'])}</td>
+      <td><span class="badge-pill ${r['Session FN/AN']=='FN'?'badge-fn':'badge-an'}">${r['Session FN/AN']||''}</span></td>
+      <td>${r['Internal Examiner']||''}<br/><small>${r['Designation']||''}</small></td>
+      <td><button class="btn btn-acc btn-sm" onclick='openExtModal(${JSON.stringify(r).replace(/"/g,"&quot;")})'>✅ Assign External</button></td>
+    </tr>`).join('');
+}
+
+// ── External Modal ────────────────────────────────────────
+function openExtModal(record) {
+  document.getElementById('extRef').textContent=record['Reference'];
+  document.getElementById('extDeptLabel').textContent=record['Dept.']||'';
+  document.getElementById('extRefInput').value=record['Reference'];
+  document.getElementById('extName').value=record['External Name']||'';
+  document.getElementById('extDesig').value=record['External Designation']||'';
+  document.getElementById('extDept').value=record['External Department']||'';
+  document.getElementById('extCollege').value=record['College']||'';
+  document.getElementById('extPhone').value=record['External Phone']||'';
+  document.getElementById('extModal').classList.add('open');
+}
+
+async function saveExternal() {
+  const d=await gasPost({
+    action:'adminSaveExternal',
+    ref:document.getElementById('extRefInput').value,
+    extName:document.getElementById('extName').value,
+    extDesig:document.getElementById('extDesig').value,
+    extDept:document.getElementById('extDept').value,
+    extCollege:document.getElementById('extCollege').value,
+    extPhone:document.getElementById('extPhone').value
+  });
+  if(d.success){
+    closeModal('extModal');
+    showToast('External assigned & approved!','success');
+    await loadAllRecords();
+    buildAdminDashboard();
+  }
+  else showToast(d.error||'Failed.','error');
+}
+
+// ── Edit Modal ────────────────────────────────────────────
+function openEdit(record) {
+  document.getElementById('eRef').value=record['Reference'];
+  document.getElementById('eDate').value=record['Date']?new Date(record['Date']).toISOString().split('T')[0]:'';
+  document.getElementById('eSession').value=record['Session FN/AN']||'FN';
+  document.getElementById('eTotal').value=record['No.of.Candidates Date']||'';
+  document.getElementById('eBatch').value=record['No of Candidates in Batch']||'';
+  document.getElementById('eRegFrom').value=record['Register Number From']||'';
+  document.getElementById('eRegTo').value=record['Register Number To']||'';
+  document.getElementById('eLab').value=record['Venue lab Name']||'';
+  document.getElementById('eIntName').value=record['Internal Examiner']||'';
+  document.getElementById('eIntDesig').value=record['Designation']||'';
+  document.getElementById('eIntPhone').value=record['Phone Number']||'';
+  document.getElementById('editModal').classList.add('open');
+}
+
+async function saveEdit() {
+  const d=await gasPost({
+    action:'updateRecord',
+    ref:document.getElementById('eRef').value,
+    date:document.getElementById('eDate').value,
+    session:document.getElementById('eSession').value,
+    totalCandidates:document.getElementById('eTotal').value,
+    batchCandidates:document.getElementById('eBatch').value,
+    regFrom:document.getElementById('eRegFrom').value,
+    regTo:document.getElementById('eRegTo').value,
+    venueLab:document.getElementById('eLab').value,
+    intExaminerName:document.getElementById('eIntName').value,
+    intExaminerDesig:document.getElementById('eIntDesig').value,
+    intExaminerPhone:document.getElementById('eIntPhone').value,
+  });
+  if(d.success){
+    closeModal('editModal');
+    showToast('Updated!','success');
+    await loadAllRecords();
+  }
+  else showToast(d.error||'Failed.','error');
+}
+
+async function deleteRecord(ref) {
+  if(!confirm(`Delete ${ref}?`)) return;
+  const d=await gasPost({action:'deleteRecord',ref});
+  if(d.success){
+    showToast('Deleted.','warn');
+    await loadAllRecords();
+    buildAdminDashboard();
+  }
+  else showToast(d.error||'Failed.','error');
+}
+
+// ── Dept-wise ─────────────────────────────────────────────
+function renderDeptWise() {
+  const dept=document.getElementById('dwDept').value;
+  const yr=document.getElementById('dwYear').value;
+  const sem=document.getElementById('dwSem').value;
+  let filtered=ALL_RECORDS;
+  if(dept) filtered=filtered.filter(r=>r['Dept.']==dept);
+  if(yr) filtered=filtered.filter(r=>String(r['Year'])==yr);
+  if(sem) filtered=filtered.filter(r=>String(r['Sem'])==sem);
+
+  const groupedDept=dept?{[dept]:filtered}:groupBy(filtered,'Dept.');
+  const html=Object.entries(groupedDept).map(([d,recs])=>`
+    <div style="margin-bottom:28px;">
+      <h3 style="font-family:'Playfair Display',serif;color:var(--p1);margin-bottom:12px;font-size:1rem;border-left:4px solid var(--p3);padding-left:10px;">${d} — ${recs.length} sessions</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;">
+        ${[...new Set(recs.map(r=>r['Sem']).filter(Boolean))].sort().map(s=>{
+          const sr=recs.filter(r=>r['Sem']==s);
+          const cand=sr.reduce((x,r)=>x+(parseInt(r['No.of.Candidates Date'])||0),0);
+          return `<div style="background:var(--p6);border-radius:8px;padding:12px;text-align:center;">
+            <div style="font-weight:700;color:var(--p1);font-size:1.1rem;">Sem ${s}</div>
+            <div style="font-size:0.75rem;color:var(--mid);">${sr.length} sessions</div>
+            <div style="font-size:0.75rem;color:var(--mid);">${cand} candidates</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Course</th><th>Date</th><th>Sess</th><th>Cand</th><th>Internal Examiner</th><th>Status</th></tr></thead>
+        <tbody>${recs.map((r,i)=>`<tr>
+          <td>${i+1}</td>
+          <td>${r['Course Code']||''}<br/><small>${r['Course Name']||''}</small></td>
+          <td>${fmtDate(r['Date'])}</td>
+          <td><span class="badge-pill ${r['Session FN/AN']=='FN'?'badge-fn':'badge-an'}">${r['Session FN/AN']||''}</span></td>
+          <td>${r['No.of.Candidates Date']||''}</td>
+          <td>${r['Internal Examiner']||''}</td>
+          <td><span class="badge-pill ${r['Status']==='approved'?'badge-approved':'badge-pending'}">${r['Status']||'pending'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`).join('');
+  document.getElementById('deptWiseContent').innerHTML=html||'<p style="color:var(--mid)">No records found.</p>';
+}
+
+function groupBy(arr,key){
+  const m={};
+  arr.forEach(r=>{
+    const k=r[key];
+    if(!k)return;
+    (m[k]=m[k]||[]).push(r);
+  });
+  return m;
+}
+
+// ── Export All ────────────────────────────────────────────
+function exportAllExcel() {
+  const wb=XLSX.utils.book_new();
+  const headers=['Reference','Dept.','Degree','Year','Sem','Course Code','Course Name','Date','Session','Candidates','Reg From','Reg To','Venue','Internal Examiner','Designation','Phone','Status','External Name','External Desig','College','External Phone'];
+  const rows=ALL_RECORDS.map(r=>[
+    r['Reference'],
+    r['Dept.'],
+    r['Degree'],
+    r['Year'],
+    r['Sem'],
+    r['Course Code'],
+    r['Course Name'],
+    fmtDate(r['Date']),
+    r['Session FN/AN'],
+    r['No.of. Candidates Date'],
+    r['Register Number From'],
+    r['Register Number To'],
+    r['Venue lab Name'],
+    r['Internal Examiner'],
+    r['Designation'],
+    r['Phone Number'],
+    r['Status'],
+    r['External Name'],
+    r['External Designation'],
+    r['College'],
+    r['External Phone']
+  ]);
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=headers.map(()=>({wch:16}));
+  XLSX.utils.book_append_sheet(wb,ws,'All Records');
+  XLSX.writeFile(wb,'KCET_Lab_All_Records.xlsx');
+  showToast('Excel exported!','success');
+}
+
+// ── Admin Report ──────────────────────────────────────────
+function getReportCols(type){
+  const base=['S.No','Degree','Dept.','Year','Sem','Course Code & Name','Date','No. of Candidates','Session','Batch','Reg. From','Reg. To','Venue'];
+  if(type==='internal') return [...base,'Internal Examiner','Signature'];
+  if(type==='external') return [...base,'External Examiner'];
+  return [...base,'Internal Examiner','External Examiner'];
+}
+
+function getReportRows(type,records){
+  return records.map((r,i)=>{
+    const venue=`${r['Venue lab Name']||''}, ${r['Venue Block & Floor']||''}`;
+    const intEx=`${r['Internal Examiner']||''}\n${r['Designation']||''}, ${r['Dept.']||''}\n${r['Phone Number']||''}`;
+    const extEx=`${r['External Name']||''}\n${r['External Designation']||''}, ${r['External Department']||''}\n${r['College']||''}\n${r['External Phone']||''}`;
+    const base=[
+      i+1,
+      r['Degree']||'',
+      r['Dept.']||'',
+      r['Year']||'',
+      r['Sem']||'',
+      `${r['Course Code']||''}\n${r['Course Name']||''}`,
+      fmtDate(r['Date']),
+      r['No.of.Candidates Date']||'',
+      r['Session FN/AN']||'',
+      r['No of Candidates in Batch']||'',
+      r['Register Number From']||'',
+      r['Register Number To']||'',
+      venue
+    ];
+    if(type==='internal') return [...base,intEx,''];
+    if(type==='external') return [...base,extEx];
+    return [...base,intEx,extEx];
+  });
+}
+
+function adminPreviewReport(){
+  const type=document.getElementById('rpType').value;
+  const dept=document.getElementById('rpDept').value;
+  const yr=document.getElementById('rpYear').value;
+  const sem=document.getElementById('rpSem').value;
+  const month=document.getElementById('rpMonth').value;
+  let filtered=ALL_RECORDS;
+  if(dept) filtered=filtered.filter(r=>r['Dept.']==dept);
+  if(yr) filtered=filtered.filter(r=>String(r['Year'])==yr);
+  if(sem) filtered=filtered.filter(r=>String(r['Sem'])==sem);
+  const cols=getReportCols(type);
+  const rows=getReportRows(type,filtered);
+  document.getElementById('adminReportSubLine').textContent=`End Semester Practical Examinations – Schedule – ${month}`;
+  document.getElementById('adminRHead').innerHTML=`<tr>${cols.map(c=>`<th>${c.replace(/\n/g,'<br/>')}</th>`).join('')}</tr>`;
+  document.getElementById('adminRBody').innerHTML=rows.map(row=>`<tr>${row.map(c=>`<td style="white-space:pre-line">${c}</td>`).join('')}</tr>`).join('');
+  document.getElementById('adminReportBox').style.display='block';
+  document.getElementById('adminReportBox').scrollIntoView({behavior:'smooth'});
+}
+
+function adminExportExcel(){
+  const type=document.getElementById('rpType').value;
+  const dept=document.getElementById('rpDept').value;
+  const yr=document.getElementById('rpYear').value;
+  const sem=document.getElementById('rpSem').value;
+  let filtered=ALL_RECORDS;
+  if(dept) filtered=filtered.filter(r=>r['Dept.']==dept);
+  if(yr) filtered=filtered.filter(r=>String(r['Year'])==yr);
+  if(sem) filtered=filtered.filter(r=>String(r['Sem'])==sem);
+  const cols=getReportCols(type);
+  const rows=getReportRows(type,filtered);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([cols,...rows]);
+  ws['!cols']=cols.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,ws,type.toUpperCase());
+  XLSX.writeFile(wb,`KCET_Admin_${type}_report.xlsx`);
+  showToast('Excel exported!','success');
+}
+
+function adminExportWord(){
+  const type=document.getElementById('rpType').value;
+  const month=document.getElementById('rpMonth').value;
+  let filtered=ALL_RECORDS;
+  const dept=document.getElementById('rpDept').value;
+  const yr=document.getElementById('rpYear').value;
+  const sem=document.getElementById('rpSem').value;
+  if(dept) filtered=filtered.filter(r=>r['Dept.']==dept);
+  if(yr) filtered=filtered.filter(r=>String(r['Year'])==yr);
+  if(sem) filtered=filtered.filter(r=>String(r['Sem'])==sem);
+  
+  const cols=getReportCols(type);
+  const rows=getReportRows(type,filtered);
+  
+  const tableHtml=`
+    <table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;font-family:'Times New Roman';font-size:7.5pt;">
+      <thead>
+        <tr style="background:#4A148C;color:white;">
+          ${cols.map(c=>`<th style="padding:5px;text-align:center;font-size:7pt;border:1px solid #333;">${c.replace(/\n/g,'<br/>')}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r=>`<tr>${r.map(c=>`<td style="padding:4px;text-align:center;font-size:7pt;border:1px solid #ccc;">${String(c).replace(/\n/g,'<br/>')}</td>`).join('')}</tr>`).join('')}
+      </tbody>
+    </table>`;
+  
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:v='urn:schemas-microsoft-com:vml'>
+    <head>
+      <meta charset="UTF-8"/>
+      <style>
+        @page Section1 {
+          size: 11in 8.5in;
+          margin-top: 0.5in;
+          margin-bottom: 0.5in;
+          margin-left: 0.75in;
+          margin-right: 0.75in;
+        }
+        body { font-family:'Times New Roman',serif; font-size:10pt; margin:0; }
+        .header-section {
+          width: 100%;
+          text-align: center;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #4A148C;
+          padding-bottom: 10px;
+        }
+        .header-logo {
+          height: 90px;
+          margin-bottom: 8px;
+        }
+        h2 { color:#4A148C; margin:0; font-size:12pt; font-weight:bold; }
+        .subtitle { color:#6A1B9A; margin:4px 0; font-size:9pt; }
+        .strong-subtitle { color:#4A148C; margin:6px 0; font-size:9.5pt; font-weight:bold; }
+        table { width:100%; border-collapse:collapse; margin-top:10px; }
+        th { background:#4A148C; color:white; padding:5px; text-align:center; border:1px solid #333; font-size:7.5pt; }
+        td { padding:4px; text-align:center; border:1px solid #ccc; font-size:7.5pt; }
+        tr:nth-child(even) { background:#F3E5F5; }
+        .footer-section {
+          margin-top: 30px;
+          display: table;
+          width: 100%;
+        }
+        .signature-block {
+          display: table-cell;
+          width: 33.33%;
+          text-align: center;
+          vertical-align: bottom;
+          padding: 20px 15px;
+        }
+        .signature-line {
+          border-top: 2px solid #4A148C;
+          padding-top: 5px;
+          margin-top: 45px;
+          font-weight: bold;
+          font-size: 8.5pt;
+          color: #4A148C;
+        }
+        .signature-title {
+          font-size: 7.5pt;
+          color: #666;
+          margin-top: 2px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header-section">
+        <img src="logo.png" class="header-logo" alt="Logo"/>
+        <div class="header-text">
+          <h2>Office of the Controller of Examinations</h2>
+          <p class="subtitle">End Semester Practical Examinations – Schedule – ${month}</p>
+          <p class="strong-subtitle">Internal &amp; External Appointment Order – Laboratory Course Examinations</p>
+        </div>
+      </div>
+      ${tableHtml}
+      <div class="footer-section">
+        <div class="signature-block">
+          <div class="signature-line">Deputy Controller of Examinations</div>
+          <div class="signature-title">Examination Center</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line">Controller of Examinations</div>
+          <div class="signature-title">Main Campus</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line">Principal</div>
+          <div class="signature-title">KCET</div>
+        </div>
+      </div>
+    </body>
+  </html>`;
+  
+  const blob = new Blob(['\ufeff'+html], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `KCET_${type}_report.doc`;
+  a.click();
+  showToast('Word exported!','success');
+}
+
+function adminExportPDF(){
+  const type=document.getElementById('rpType').value;
+  const month=document.getElementById('rpMonth').value;
+  let filtered=ALL_RECORDS;
+  const dept=document.getElementById('rpDept').value;
+  const yr=document.getElementById('rpYear').value;
+  const sem=document.getElementById('rpSem').value;
+  if(dept) filtered=filtered.filter(r=>r['Dept.']==dept);
+  if(yr) filtered=filtered.filter(r=>String(r['Year'])==yr);
+  if(sem) filtered=filtered.filter(r=>String(r['Sem'])==sem);
+  
+  const cols=getReportCols(type);
+  const rows=getReportRows(type,filtered);
+  
+  const w=window.open('','_blank');
+  w.document.write(`<html>
+    <head>
+      <meta charset="UTF-8"/>
+      <style>
+        @page {
+          size: A4 landscape;
+          margin-top: 12mm;
+          margin-bottom: 12mm;
+          margin-left: 12mm;
+          margin-right: 12mm;
+        }
+        body {
+          font-family:'Times New Roman',serif;
+          font-size:7.5pt;
+          margin:0;
+          padding:0;
+        }
+        .header-section {
+          width: 100%;
+          text-align: center;
+          margin-bottom: 12px;
+          border-bottom: 2px solid #4A148C;
+          padding-bottom: 8px;
+          page-break-after: avoid;
+        }
+        .header-logo {
+          height: 85px;
+          margin-bottom: 6px;
+        }
+        h2 {
+          text-align: center;
+          color: #4A148C;
+          font-size: 11pt;
+          margin: 0;
+          font-weight: bold;
+        }
+        .subtitle {
+          text-align: center;
+          color: #6A1B9A;
+          margin: 3px 0;
+          font-size: 8.5pt;
+        }
+        .strong-subtitle {
+          text-align: center;
+          color: #4A148C;
+          margin: 4px 0;
+          font-size: 8.5pt;
+          font-weight: bold;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          page-break-inside: auto;
+        }
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+        }
+        th {
+          background: #4A148C;
+          color: white;
+          padding: 4px 3px;
+          text-align: center;
+          border: 1px solid #333;
+          font-size: 6.5pt;
+          font-weight: bold;
+          vertical-align: middle;
+        }
+        td {
+          padding: 3px;
+          text-align: center;
+          border: 1px solid #ccc;
+          font-size: 6.5pt;
+          vertical-align: middle;
+          word-wrap: break-word;
+        }
+        tr:nth-child(even) { background: #F3E5F5; }
+        .footer-section {
+          margin-top: 25px;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          padding: 0;
+          page-break-before: avoid;
+          width: 100%;
+        }
+        .signature-block {
+          text-align: center;
+          flex: 1;
+        }
+        .signature-line {
+          border-top: 2px solid #4A148C;
+          padding-top: 5px;
+          margin-top: 40px;
+          font-weight: bold;
+          font-size: 8pt;
+          color: #4A148C;
+        }
+        .signature-title {
+          font-size: 7pt;
+          color: #666;
+          margin-top: 2px;
+        }
+      </style>
+    </head>
+    <body onload="window.print()">
+      <div class="header-section">
+        <img src="logo.png" class="header-logo" alt="Logo"/>
+        <div class="header-text">
+          <h2>Office of the Controller of Examinations</h2>
+          <p class="subtitle">End Semester Practical Examinations – Schedule – ${month}</p>
+          <p class="strong-subtitle">Internal &amp; External Appointment Order – Laboratory Course Examinations</p>
+        </div>
+      </div>
+      <table>
+        <thead><tr>${cols.map(c=>`<th>${c.replace(/\n/g,'<br/>')}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${String(c).replace(/\n/g,'<br/>')}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+      <div class="footer-section">
+        <div class="signature-block">
+          <div class="signature-line">Deputy Controller of Examinations</div>
+          <div class="signature-title">Examination Center</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line">Controller of Examinations</div>
+          <div class="signature-title">Main Campus</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line">Principal</div>
+          <div class="signature-title">KCET</div>
+        </div>
+      </div>
+    </body>
+  </html>`);
+  w.document.close();
+  showToast('PDF opened!','success');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── LOCK MANAGEMENT SYSTEM ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function loadLockStatus() {
+  const depts=[...new Set(ALL_RECORDS.map(r=>r['Dept.']).filter(Boolean))];
+  const body=document.getElementById('lockBody');
+  
+  if(!depts.length){
+    body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mid)">ℹ️ No departments found in system.</td></tr>';
+    return;
+  }
+  
+  body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--mid);">Loading lock status...</td></tr>';
+  
+  try {
+    const lockStatus=await Promise.all(depts.map(async (d)=>{
+      const res=await gas({action:'getLockStatus',department:d});
+      return {dept:d,locked:res.locked||false};
+    }));
+    
+    body.innerHTML=lockStatus.map((s,i)=>`
+      <tr>
+        <td style="text-align:center;font-weight:600;">${i+1}</td>
+        <td style="font-weight:700;">${s.dept}</td>
+        <td style="text-align:center;">
+          <span class="lock-status-badge ${s.locked?'locked':'unlocked'}">
+            ${s.locked?'🔒 LOCKED':'🔓 UNLOCKED'}
+          </span>
+        </td>
+        <td style="text-align:center;font-size:0.75rem;color:var(--mid);">
+          ${new Date().toLocaleDateString('en-IN')}
+        </td>
+        <td style="text-align:center;">
+          <button class="btn ${s.locked?'btn-success':'btn-warn'} btn-sm" onclick="toggleLock('${s.dept.replace(/'/g,"\\'")}',${!s.locked})" style="margin:0;">
+            ${s.locked?'🔓 Unlock':'🔒 Lock'}
+          </button>
+        </td>
+      </tr>`).join('');
+  } catch(err) {
+    console.error('Error loading lock status:', err);
+    body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--red);">⚠️ Error loading lock status. Please try again.</td></tr>';
+  }
+}
+
+async function toggleLock(dept,shouldLock){
+  const action=shouldLock?'lock':'unlock';
+  const msg=`Are you sure you want to ${action} ${dept}?\n\n${shouldLock?'Faculty will NOT be able to add new exam sessions.':'Faculty will be able to add exam sessions again.'}`;
+  
+  if(!confirm(msg)) return;
+  
+  try {
+    const d=await gasPost({
+      action:'setLock',
+      department:dept,
+      locked:shouldLock
+    });
+    
+    if(d.success){
+      showToast(shouldLock?`✅ ${dept} is now LOCKED!`:`✅ ${dept} is now UNLOCKED!`,'success');
+      await loadLockStatus();
+    } else {
+      showToast(d.error||`Failed to ${action} ${dept}. Please try again.`,'error');
+    }
+  } catch(err) {
+    console.error('Error toggling lock:', err);
+    showToast(`Failed to ${action} department. Please check your connection and try again.`,'error');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+}
+
+function logout(){
+  sessionStorage.clear();
+  window.location.href='index.html';
+}
+</script>
+</body>
+</html>
